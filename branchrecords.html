@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지점 결과 리포트</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background-color: #f4f4f8; }
+        .container { max-width: 95%; margin: auto; }
+        h1 { text-align: center; }
+        .card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .login-box { max-width: 400px; margin: 50px auto; text-align: center; }
+        .toolbar { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .toolbar button { padding: 10px 20px; border: 1px solid #ccc; background-color: white; color: #333; border-radius: 5px; cursor: pointer; font-weight: 500; font-size: 1rem; }
+        .toolbar button.active { background-color: #007bff; color: white; border-color: #007bff; }
+        .toolbar .excel-btn { background-color: #198754; color: white; border: none; }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        .toolbar select { padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 1rem; }
+        .averages-card { display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; /* 작은 화면에서 줄바꿈 */ gap: 10px; /* 아이템 간격 */ }
+        .average-item { flex: 1; min-width: 120px; /* 최소 너비 */ }
+        .average-item h3 { margin: 0 0 5px 0; font-size: 0.9rem; color: #6c757d; }
+        .average-item p { margin: 0; font-size: 1.3rem; font-weight: bold; color: #007bff; }
+
+        .table-container { overflow-y: auto; max-height: 70vh; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        td { padding: 8px; border: 1px solid #ddd; text-align: center; white-space: nowrap; background: white; }
+        tbody tr:hover td { background-color: #f1f1f1; }
+        th { position: sticky; top: -1px; background: #f8f9fa; font-weight: 600; z-index: 1; padding: 8px; border: 1px solid #ddd; text-align: center; white-space: nowrap; }
+        thead tr:nth-child(2) th { top: 37px; /* 첫 번째 헤더 높이에 맞게 조정 */ }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: #e2e6ea; }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <div class="card login-box">
+            <h1>지점 리포트 로그인</h1>
+            <input type="password" id="passwordInput" placeholder="비밀번호" style="width: 100%; padding: 12px; margin-bottom: 10px; box-sizing: border-box;">
+            <button onclick="handleLogin()" style="width: 100%; padding: 12px; background-color: #007bff;">로그인</button>
+        </div>
+    </div>
+
+    <div id="main-content" class="container" style="display: none;">
+        <h1 id="report-title"></h1>
+        <div class="toolbar">
+            <div class="filter-group">
+                <label>순위 기준:</label>
+                <button id="rank-scope-branch" class="active" onclick="setRankScope('branch')">지점</button>
+                <button id="rank-scope-overall" onclick="setRankScope('overall')">전체</button>
+            </div>
+            <div class="filter-group">
+                <label for="gender-filter">성별 필터:</label>
+                <select id="gender-filter" onchange="filterByGender()">
+                    <option value="all">전체</option>
+                    <option value="남">남자</option>
+                    <option value="여">여자</option>
+                </select>
+            </div>
+            <button class="excel-btn" onclick="downloadExcel()">엑셀로 다운로드</button>
+        </div>
+
+        <div class="card averages-card">
+            <div class="average-item"><h3>제멀 평균</h3><p id="avg-jemul">-</p></div>
+            <div class="average-item"><h3>메디신볼 평균</h3><p id="avg-medball">-</p></div>
+            <div class="average-item"><h3>10m 왕복 평균</h3><p id="avg-10m">-</p></div>
+            <div class="average-item"><h3>배근력 평균</h3><p id="avg-backstr">-</p></div>
+            <div class="average-item"><h3>좌전굴 평균</h3><p id="avg-flex">-</p></div> </div>
+
+        <div class="card table-container" style="margin-top: 20px; padding: 0;">
+            <table id="report-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">No.</th><th rowspan="2">성별</th><th rowspan="2">이름</th>
+                        <th rowspan="2">총점</th><th class="sortable" rowspan="2" onclick="sortReport('overallRank')">종합순위</th>
+                        <th colspan="3">제자리멀리뛰기</th><th colspan="3">메디신볼</th>
+                        <th colspan="3">10m 왕복</th><th colspan="3">배근력</th>
+                        <th colspan="3">좌전굴</th> </tr>
+                    <tr>
+                        <th>기록</th><th>점수</th><th class="sortable" onclick="sortReport('제멀')">순위</th>
+                        <th>기록</th><th>점수</th><th class="sortable" onclick="sortReport('메디신볼')">순위</th>
+                        <th>기록</th><th>점수</th><th class="sortable" onclick="sortReport('10m')">순위</th>
+                        <th>기록</th><th>점수</th><th class="sortable" onclick="sortReport('배근력')">순위</th>
+                        <th>기록</th><th>점수</th><th class="sortable" onclick="sortReport('좌전굴')">순위</th> </tr>
+                </thead>
+                <tbody id="report-body"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        const API_URL = 'https://supermax.kr';
+        let currentBranch = '';
+        let branchData = []; // 지점 전체 학생 데이터 (필터링 전 원본)
+        let overallRankData = {}; // 전체 학생 순위 데이터 (id 기준 맵)
+        let currentRankScope = 'branch'; // 'branch' or 'overall'
+        // ⭐️ EVENTS 객체: 키는 데이터 처리용, 값은 평균 표시용 HTML id
+        const EVENTS = { '제멀': 'avg-jemul', '메디신볼': 'avg-medball', '10m': 'avg-10m', '배근력': 'avg-backstr', '좌전굴': 'avg-flex' };
+        let sortDirections = {}; // 현재 정렬 방향 저장
+
+        function handleLogin() {
+            const password = document.getElementById('passwordInput').value;
+            // ⭐️ 지점 비밀번호 목록: 26년도 북부 선행반 테스트 지점 기준으로 업데이트 필요!
+            const branchPasswords = {
+                // 예시: '비번1': '강남', '비번2': '강동', ... '비번23': '하남'
+                '2601': '경산', '0514': '군포', '1093': '분당', '6098': '수원', '4125': '영통', '2543': '이천', '6977': '동탄', '3912': '용인', '1165': '광주', '9247': '군산', '0705': '순천여수광양', '8934': '익산', '4565': '전주', '4204': '충주', '4291': '논산', '2481': '대전', '4292': '세종', '5591': '청주', '6627': '강남', '9065': '강동', '7468': '서초', '0821': '하남', '8158': '아산', '0928': '천안', '7087': '인천서구', '8691': '일산', '3516': '김해', '0265': '대구만촌명덕', '2141': '대구상인성서', '5531': '밀양', '3517': '부산동래', '7816': '서면', '0963': '양산', '9872': '울산', '5845': '창원', '7317': '화명', '2159': '부천', '9868': '인천연수', '5553': '대구칠곡', '9717': '제주', '2673': '강릉', '6332': '원주', '7929': '의정부', '5680': '인천계양', '0917': '철원', '3960': '포천'
+                 // 여기에 23개 지점과 비밀번호를 모두 넣어주세요.
+            };
+            const branchName = branchPasswords[password];
+            if (branchName) {
+                currentBranch = branchName;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('report-title').textContent = `${currentBranch} 교육원 결과 리포트`;
+                fetchReportData(); // 데이터 로딩 시작
+            } else {
+                alert('비밀번호가 올바르지 않습니다.');
+            }
+        }
+
+        async function fetchReportData() {
+            const tbody = document.getElementById('report-body');
+            tbody.innerHTML = `<tr><td colspan="20">데이터 로딩 중...</td></tr>`; // ⭐️ Colspan 20
+            try {
+                // 지점 데이터와 전체 순위 데이터를 동시에 요청
+                const [branchRes, overallRankRes] = await Promise.all([
+                    fetch(`${API_URL}/26susi/branch-report?branchName=${encodeURIComponent(currentBranch)}`),
+                    fetch(`${API_URL}/26susi/all-ranks`) // 전체 학생 순위 정보
+                ]);
+                const branchResult = await branchRes.json();
+                const overallRankResult = await overallRankRes.json();
+
+                if (branchResult.success && overallRankResult.success) {
+                    branchData = branchResult.data; // 원본 데이터 저장
+                    overallRankData = overallRankResult.data; // 전체 순위 맵 저장
+                    filterByGender(); // 성별 필터링 및 초기 렌더링
+                } else {
+                     tbody.innerHTML = `<tr><td colspan="20">데이터 로딩 실패.</td></tr>`; // ⭐️ Colspan 20
+                }
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="20">서버 연결 오류.</td></tr>`; // ⭐️ Colspan 20
+                console.error("Report data loading error:", error);
+            }
+        }
+
+        // 성별 필터링 함수
+        function filterByGender() {
+            const selectedGender = document.getElementById('gender-filter').value;
+            const dataToShow = (selectedGender === 'all')
+                ? branchData // 전체 선택 시 원본 데이터 사용
+                : branchData.filter(student => student.gender === selectedGender); // 선택된 성별로 필터링
+
+            displayAverages(dataToShow); // 필터링된 데이터 기준으로 평균 계산 및 표시
+            sortReport('overallRank', dataToShow, true); // 필터링된 데이터 기준으로 종합 순위 정렬 (초기 호출 시 강제 정렬)
+        }
+
+        // 기록 포맷 함수 (단위 추가)
+        function formatRecord(event, recordValue) {
+            if (recordValue === null || recordValue === undefined || isNaN(recordValue)) return '-';
+            const recordNum = parseFloat(recordValue);
+            if (event === '10m') return `${recordNum.toFixed(2)} 초`;
+            if (event === '제멀') return `${recordNum.toFixed(0)} cm`;
+            if (event === '좌전굴') return `${recordNum.toFixed(1)} cm`; // ⭐️ 좌전굴 단위 (cm, 소수점 1자리)
+            const unit = (event === '메디신볼') ? ' m' : ' kg'; // 배근력, 메디신볼
+            return `${recordNum.toFixed(1)}${unit}`; // 소수점 1자리
+        }
+
+        // 평균 계산 및 표시 함수
+        function displayAverages(data) {
+            // EVENTS 객체 순회 (좌전굴 포함)
+            for (const event in EVENTS) {
+                const elementId = EVENTS[event]; // 예: 'avg-jemul', 'avg-flex'
+                // 해당 종목 기록 값들만 추출 (숫자이고 null/undefined 아닌 것만)
+                const records = data
+                    .map(s => s.records[event]?.record)
+                    .filter(r => r !== undefined && r !== null && !isNaN(parseFloat(r)));
+
+                let average = '-';
+                if (records.length > 0) {
+                    const sum = records.reduce((total, record) => total + parseFloat(record), 0);
+                    average = formatRecord(event, sum / records.length); // 포맷 함수 재활용
+                }
+                document.getElementById(elementId).textContent = average; // HTML 요소에 평균값 표시
+            }
+        }
+
+        // 테이블 렌더링 함수
+        function renderReportTable(data) {
+            const tbody = document.getElementById('report-body');
+            let rows = '';
+            data.forEach((student, index) => {
+                rows += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${student.gender}</td>
+                    <td>${student.name}</td>
+                    <td>${student.totalScore || '-'}</td>
+                    <td>${currentRankScope === 'branch' ? student.branchOverallRank : (overallRankData[student.id]?.overallRank || '-')}</td>`;
+
+                // EVENTS 객체 순회하며 각 종목 데이터(기록, 점수, 순위) 추가
+                Object.keys(EVENTS).forEach(eventKey => {
+                    const rec = student.records[eventKey]; // 해당 학생의 해당 종목 기록 객체
+
+                    // 전체 순위 조회 API(/all-ranks) 응답 키 이름 매핑
+                    // ⭐️ 백엔드 응답 키 확인 필수!
+                    const rankKey = (eventKey === '10m') ? 'ten_m_rank' :
+                                    (eventKey === '배근력') ? 'baegun_rank' :
+                                    (eventKey === '제멀') ? 'jemul_rank' :
+                                    (eventKey === '메디신볼') ? 'medball_rank' :
+                                    'jwajeon_rank'; // ⭐️ 좌전굴 키
+
+                    // 현재 순위 기준(지점/전체)에 따라 표시할 순위 값 결정
+                    const rank = (currentRankScope === 'branch')
+                        ? rec?.branchRank // 지점 내 순위
+                        : overallRankData[student.id]?.[rankKey]; // 전체 순위
+
+                    const formattedRecord = rec ? formatRecord(eventKey, rec.record) : '-'; // 기록 포맷팅
+
+                    rows += `
+                        <td>${formattedRecord}</td>
+                        <td>${rec ? rec.score : '-'}</td>
+                        <td>${rank || '-'}</td>`;
+                });
+                rows += `</tr>`;
+            });
+            // 데이터 없을 시 메시지 표시 (Colspan 20)
+            tbody.innerHTML = rows || `<tr><td colspan="20">표시할 데이터가 없습니다.</td></tr>`; // ⭐️ Colspan 20
+        }
+
+        // 순위 기준 변경 함수 (지점/전체)
+        function setRankScope(scope) {
+            currentRankScope = scope;
+            // 버튼 활성화/비활성화 토글
+            document.getElementById('rank-scope-branch').classList.toggle('active', scope === 'branch');
+            document.getElementById('rank-scope-overall').classList.toggle('active', scope === 'overall');
+            filterByGender(); // 순위 기준 변경 시 현재 필터 기준으로 다시 렌더링
+        }
+
+        // 테이블 정렬 함수
+        function sortReport(sortBy, dataToSort = null, forceSort = false) {
+            // dataToSort가 null이면 현재 필터링된 데이터 사용
+             const currentFilteredData = dataToSort || branchData.filter(student => {
+                 const gender = document.getElementById('gender-filter').value;
+                 return gender === 'all' || student.gender === gender;
+             });
+
+            // 정렬 방향 결정 (같은 컬럼 클릭 시 방향 토글)
+            const currentDirection = sortDirections[sortBy];
+            const direction = (currentDirection === 'asc' && !forceSort) ? 'desc' : 'asc';
+            sortDirections = { [sortBy]: direction }; // 현재 정렬 상태 저장
+
+            currentFilteredData.sort((a, b) => {
+                let valA, valB;
+                // 종합 순위 정렬
+                if (sortBy === 'overallRank') {
+                    valA = (currentRankScope === 'branch') ? a.branchOverallRank : (overallRankData[a.id]?.overallRank || 9999);
+                    valB = (currentRankScope === 'branch') ? b.branchOverallRank : (overallRankData[b.id]?.overallRank || 9999);
+                }
+                // 종목별 순위 정렬
+                else {
+                    const rankKey = (sortBy === '10m') ? 'ten_m_rank' : (sortBy === '배근력') ? 'baegun_rank' : (sortBy === '제멀') ? 'jemul_rank' : (sortBy === '메디신볼') ? 'medball_rank' : 'jwajeon_rank'; // ⭐️ 좌전굴 키 포함
+                    valA = (currentRankScope === 'branch') ? (a.records[sortBy]?.branchRank || 9999) : (overallRankData[a.id]?.[rankKey] || 9999);
+                    valB = (currentRankScope === 'branch') ? (b.records[sortBy]?.branchRank || 9999) : (overallRankData[b.id]?.[rankKey] || 9999);
+                }
+                // 9999는 순위 없는 경우 맨 뒤로 보내기 위함
+                valA = valA === '-' || valA === null || valA === undefined ? 9999 : valA;
+                valB = valB === '-' || valB === null || valB === undefined ? 9999 : valB;
+
+                return direction === 'asc' ? valA - valB : valB - valA; // 오름차순/내림차순
+            });
+            renderReportTable(currentFilteredData); // 정렬된 데이터로 테이블 다시 그리기
+        }
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const table = document.getElementById('report-table');
+            const genderFilter = document.getElementById('gender-filter').value;
+            const rankScope = currentRankScope === 'branch' ? '지점순위' : '전체순위';
+            const file_name = `${currentBranch}_${genderFilter}_결과(${rankScope}).xls`;
+            // UTF-8 인코딩 및 Excel 스타일 적용
+            const style = `<style> table, th, td { border: 1px solid black; border-collapse: collapse; text-align: center; } </style>`;
+            const template = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name=ProgId content=Excel.Sheet>
+                    <meta name=Generator content="Microsoft Excel 11">
+                    ${style}
+                </head>
+                <body><table border="1">${table.innerHTML}</table></body></html>`;
+            // Base64 인코딩
+            const base64 = (s) => window.btoa(unescape(encodeURIComponent(s)));
+            const uri = 'data:application/vnd.ms-excel;base64,';
+            // 다운로드 링크 생성 및 클릭
+            const link = document.createElement('a');
+            link.href = uri + base64(template);
+            link.download = file_name;
+            link.click();
+        }
+    </script>
+</body>
+</html>
