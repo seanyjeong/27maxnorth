@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>전체 수험번호 확인</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 15px; background-color: #f4f4f8; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1, h2 { text-align: center; }
+        /* ⭐️ 총인원 숫자 스타일 ⭐️ */
+        h1 span { 
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #007bff;
+            margin-left: 10px;
+        }
+        
+        /* 지점 선택 뷰 */
+        #branch-selection-view {
+            display: block;
+        }
+        .branch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .branch-btn {
+            padding: 20px 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .branch-btn:hover { background-color: #e9ecef; }
+        .branch-btn:disabled {
+            background-color: #f8f9fa;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        #loading-msg {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #6c757d;
+            padding: 20px;
+        }
+
+        /* 학생 목록 뷰 */
+        #student-list-view {
+            display: none;
+        }
+        .back-btn {
+            padding: 10px 15px;
+            font-size: 1rem;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        /* 모바일용 테이블 스크롤 */
+        .table-wrapper {
+            overflow-x: auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap; /* 테이블 내용 줄바꿈 방지 */
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+            text-align: center;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        td:nth-child(1) { text-align: left; font-weight: 500; } /* 이름 */
+        td:nth-child(2) { text-align: left; } /* 학교 */
+    </style>
+</head>
+<body>
+
+    <div id="branch-selection-view" class="container">
+        <h1>전체 수험번호 확인 <span id="total-student-count">(0명)</span></h1>
+        
+        <div id="branch-grid" class="branch-grid">
+            <p id="loading-msg">전체 학생 명단 로딩 중...</p>
+            </div>
+    </div>
+
+    <div id="student-list-view" class="container" style="display: none;">
+        <button class="back-btn" onclick="showBranchSelection()">← 뒤로가기</button>
+        <h2 id="list-title"></h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>학교</th>
+                        <th>성별</th>
+                        <th>학년</th>
+                        <th>수험번호</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list-tbody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://supermax.kr';
+        const branchPasswords = {
+            '0514': '군포', '1093': '분당', '6098': '수원', '4125': '영통', '6165': '이천', 
+            '6977': '동탄', '3912': '용인','6627': '강남', '9065': '강동', '7468': '서초', '0821': '하남',
+            '7087': '인천서구', '6765': '일산','2159': '부천', '9868': '인천연수','2673': '강릉',
+            '6332': '원주', '7929': '의정부', '5680': '인천계양', '0917': '철원', '3960': '포천','2674':'속초.동해','6164':'송파'
+        };
+        
+        let allStudents = [];
+
+        window.onload = async function() {
+            try {
+                const response = await fetch(`${API_URL}/26susi/students?view=all`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    allStudents = result.data;
+                    
+                    // ⭐️ 2. 전체 총 인원 수 업데이트 ⭐️
+                    document.getElementById('total-student-count').textContent = `(총 ${allStudents.length}명)`;
+                        
+                    renderBranchButtons();
+                } else {
+                    document.getElementById('loading-msg').textContent = '학생 목록 로딩 실패: ' + result.message;
+                }
+            } catch (error) {
+                document.getElementById('loading-msg').textContent = '서버와 통신 중 오류가 발생했습니다.';
+            }
+        };
+
+        function renderBranchButtons() {
+            const grid = document.getElementById('branch-grid');
+            grid.innerHTML = ''; 
+            
+            for (const code in branchPasswords) {
+                const branchName = branchPasswords[code];
+                grid.innerHTML += `<button class="branch-btn" onclick="showStudentList('${branchName}')">${branchName}</button>`;
+            }
+        }
+
+        function showStudentList(branchName) {
+            document.getElementById('branch-selection-view').style.display = 'none';
+            document.getElementById('student-list-view').style.display = 'block';
+
+            const branchStudents = allStudents.filter(s => s.branch_name === branchName);
+
+            // ⭐️ 3. 지점별 총 인원 수 업데이트 ⭐️
+            document.getElementById('list-title').textContent = `${branchName} 학생 목록 (${branchStudents.length}명)`;
+
+            branchStudents.sort((a, b) => {
+                if (!a.exam_number && !b.exam_number) return a.student_name.localeCompare(b.student_name);
+                if (!a.exam_number) return 1;
+                if (!b.exam_number) return -1;
+                const partsA = a.exam_number.split('-');
+                const partsB = a.exam_number.split('-');
+                const letterCompare = partsA[0].localeCompare(partsB[0]);
+                if (letterCompare !== 0) return letterCompare;
+                return parseInt(partsA[1], 10) - parseInt(partsB[1], 10);
+            });
+
+            const tbody = document.getElementById('student-list-tbody');
+            tbody.innerHTML = ''; 
+            
+            if (branchStudents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">해당 지점의 학생이 없습니다.</td></tr>';
+                return;
+            }
+            
+            branchStudents.forEach(s => {
+                const row = `
+                    <tr>
+                        <td>${s.student_name || '이름없음'}</td>
+                        <td>${s.school || '미입력'}</td>
+                        <td>${s.gender || '미입력'}</td>
+                        <td>${s.grade || '미입력'}</td>
+                        <td><strong>${s.exam_number || '미배정'}</strong></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function showBranchSelection() {
+            document.getElementById('student-list-view').style.display = 'none';
+            document.getElementById('branch-selection-view').style.display = 'block';
+            document.getElementById('student-list-tbody').innerHTML = ''; 
+        }
+    </script>
+
+</body>
+</html>
