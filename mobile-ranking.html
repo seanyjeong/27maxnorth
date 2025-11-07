@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>모바일 실시간 랭킹</title>
+    
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4361ee;
+            --danger: #dc3545;
+            --light-gray: #f0f2f5;
+            --text: #212529;
+            --text-secondary: #6c757d;
+        }
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            background-color: var(--light-gray); 
+            color: var(--text); 
+        }
+        
+        .banner-container {
+            width: 100%;
+            background-color: #000;
+        }
+        .banner-container img {
+            width: 100%;
+            display: block;
+        }
+
+        .container {
+            padding: 16px;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-family: inherit;
+        }
+        .search-container input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .filter-controls {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .button-group {
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding-bottom: 5px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .button-group::-webkit-scrollbar {
+            display: none;
+        }
+        .button-group button {
+            padding: 10px 16px;
+            border: 1px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            font-weight: 600;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .button-group button.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 16px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 10px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 700;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        td .rank {
+            font-weight: 900;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+        td .name {
+            font-weight: 600;
+            color: var(--text);
+        }
+        td .record {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        td .score {
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .loader {
+            display: none;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #no-results {
+            display: none;
+            text-align: center;
+            padding: 30px 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="banner-container">
+        <img src="https://github.com/seanyjeong/27maxnorth/blob/main/KakaoTalk_20251104_150153255.png?raw=true" alt="Banner">
+    </div>
+
+    <div class="container">
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="이름 또는 수험번호로 검색...">
+        </div>
+
+        <div class="filter-controls">
+            <div class="button-group" id="gender-select">
+                <button class="active" onclick="handleFilterClick('gender', '전체', this)">전체</button>
+                <button onclick="handleFilterClick('gender', '남', this)">남자</button>
+                <button onclick="handleFilterClick('gender', '여', this)">여자</button>
+            </div>
+            <div class="button-group" id="event-select">
+                <button class="active" onclick="handleFilterClick('event', '종합', this)">종합</button>
+                <button onclick="handleFilterClick('event', '제멀', this)">제멀</button>
+                <button onclick="handleFilterClick('event', '메디신볼', this)">메디신볼</button>
+                <button onclick="handleFilterClick('event', '10m', this)">10m</button>
+                <button onclick="handleFilterClick('event', '배근력', this)">배근력</button>
+                <button onclick="handleFilterClick('event', '좌전굴', this)">좌전굴</button>
+            </div>
+        </div>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="table-wrapper">
+            <table id="ranking-table">
+                <thead id="table-head">
+                </thead>
+                <tbody id="table-body">
+                </tbody>
+            </table>
+            <div id="no-results">검색 결과가 없습니다.</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://supermax.kr';
+        let currentGender = '전체'; 
+        let currentEvent = '종합';
+        let allData = [];
+        let searchDebounce;
+
+        const loader = document.getElementById('loader');
+        const tableHead = document.getElementById('table-head');
+        const tableBody = document.getElementById('table-body');
+        const searchInput = document.getElementById('search-input');
+        const noResults = document.getElementById('no-results');
+
+        window.onload = () => {
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(handleSearch, 300);
+            });
+            fetchData();
+        };
+
+        function handleFilterClick(type, value, element) {
+            if (type === 'gender' && value === currentGender) return;
+            if (type === 'event' && value === currentEvent) return;
+
+            if (type === 'gender') {
+                currentGender = value;
+                document.querySelectorAll('#gender-select button').forEach(btn => btn.classList.remove('active'));
+            } else {
+                currentEvent = value;
+                document.querySelectorAll('#event-select button').forEach(btn => btn.classList.remove('active'));
+            }
+            element.classList.add('active');
+            
+            fetchData();
+        }
+
+        async function fetchData() {
+            loader.style.display = 'block';
+            tableBody.innerHTML = '';
+            noResults.style.display = 'none';
+            searchInput.value = '';
+            
+            try {
+                const response = await fetch(`${API_URL}/26susi/rankings?classType=전체&gender=${currentGender}&event=${currentEvent}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    allData = result.data;
+                    renderTable(allData);
+                } else {
+                    allData = [];
+                    renderTable([]);
+                }
+            } catch (error) {
+                console.error("랭킹 로딩 실패:", error);
+                allData = [];
+                renderTable([]);
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function handleSearch() {
+            const keyword = searchInput.value.toLowerCase().trim();
+            if (keyword === '') {
+                renderTable(allData);
+                return;
+            }
+            
+            const filteredData = allData.filter(s => 
+                s.student_name.toLowerCase().includes(keyword) || 
+                (s.exam_number && s.exam_number.toLowerCase().includes(keyword))
+            );
+            
+            renderTable(filteredData);
+        }
+
+        function renderTable(data) {
+            renderTableHead();
+            renderTableBody(data);
+        }
+
+        function renderTableHead() {
+            tableHead.innerHTML = '';
+            let headers = [];
+            
+            if (currentEvent === '종합') {
+                headers = ['순위', '수험번호', '이름'];
+                // ⭐️ [수정] '전체' 성별일 때만 '성별' 컬럼 추가
+                if (currentGender === '전체') {
+                    headers.push('성별');
+                }
+                headers.push('총점');
+            } else {
+                headers = ['순위', '수험번호', '이름'];
+                // ⭐️ [수정] '전체' 성별일 때만 '성별' 컬럼 추가
+                if (currentGender === '전체') {
+                    headers.push('성별');
+                }
+                headers.push('기록');
+                headers.push('점수');
+            }
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+            tableHead.appendChild(tr);
+        }
+
+        function renderTableBody(data) {
+            tableBody.innerHTML = '';
+            
+            if (!data || data.length === 0) {
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                let rowHtml = '';
+                // ⭐️ [수정] '전체' 성별일 때만 '성별' 셀 추가
+                let genderCell = (currentGender === '전체') ? `<td>${r.gender}</td>` : '';
+
+                if (currentEvent === '종합') {
+                    rowHtml = `
+                        <td><span class="rank">${r.ranking}</span></td>
+                        <td>${r.exam_number || 'N/A'}</td>
+                        <td><span class="name">${r.student_name}</span></td>
+                        ${genderCell}
+                        <td><span class="score">${r.score}점</span></td>
+                    `;
+                } else {
+                    let recordDisplay = r.record_value;
+                    if (r.record_value === 0 && r.score === 52) {
+                        recordDisplay = 'F';
+                    } else if (currentEvent === '10m') {
+                        recordDisplay += '초';
+                    }
+                    
+                    rowHtml = `
+                        <td><span class="rank">${r.ranking}</span></td>
+                        <td>${r.exam_number || 'N/A'}</td>
+                        <td><span class="name">${r.student_name}</span></td>
+                        ${genderCell}
+                        <td><span class="record">${recordDisplay}</span></td>
+                        <td><span class="score">${r.score}점</span></td>
+                    `;
+                }
+                tr.innerHTML = rowHtml;
+                tableBody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
