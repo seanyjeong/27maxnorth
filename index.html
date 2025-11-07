@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25년선행반북부</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --dark: #212529;
+            --light-gray: #f0f2f5;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 폰트 임포트 */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--light-gray);
+            overflow: hidden; 
+        }
+
+        body {
+            display: grid;
+            grid-template-rows: auto 1fr; 
+        }
+
+        .main-header {
+            background-color: var(--dark);
+            color: white;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap; 
+        }
+
+        .main-header h1 {
+            font-size: 1.5rem;
+            margin: 12px 0;
+            margin-right: 32px;
+            font-weight: 800;
+        }
+
+        .main-header h1 a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-header nav {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0;
+            overflow-x: auto; 
+            white-space: nowrap;
+        }
+
+        .main-header nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .main-header nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .main-header nav a:active,
+        .main-header nav a:focus {
+             background-color: var(--primary);
+        }
+
+        .content-wrapper {
+            overflow: hidden;
+        }
+
+        .content-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 0 16px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .main-header h1 {
+                margin-right: 0;
+                font-size: 1.3rem;
+            }
+            .main-header nav {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <h1><a href="index.html">맥스북부 선행반테스트</a></h1>
+        <nav>
+            <a href="./dashboard.html" target="content-frame">메인 대시보드</a>
+            <a href="./pre-event-dashboard.html" target="content-frame">사전 현황판</a>
+            <a href="./조별현황.html" target="content-frame">조별 현황판</a>
+            <a href="./ranking.html" target="content-frame">실시간 랭킹</a>
+            
+            <a href="./branch-top-report.html" target="content-frame">지점별 종합 1등</a>
+            <a href="./records.html" target="content-frame">기록 입력</a>
+            <a href="./branch.html" target="content-frame">현장 출결</a>
+
+        </nav>
+    </header>
+
+    <main class="content-wrapper">
+        <iframe 
+            src="./dashboard.html" 
+            name="content-frame" 
+            title="콘텐츠 영역">
+        </iframe>
+    </main>
+
+</body>
+</html>
