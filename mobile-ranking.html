@@ -60,7 +60,8 @@
         .button-group {
             display: flex;
             overflow-x: auto;
-            gap: 8px;
+            /* ⭐️ [수정] 버튼 간격 줄임 ⭐️ */
+            gap: 6px; 
             padding-bottom: 5px;
             -ms-overflow-style: none;
             scrollbar-width: none;
@@ -69,14 +70,15 @@
             display: none;
         }
         .button-group button {
-            padding: 10px 16px;
+            /* ⭐️ [수정] 버튼 좌우 여백, 폰트 크기 줄임 ⭐️ */
+            padding: 10px 12px; 
             border: 1px solid var(--primary);
             background: white;
             color: var(--primary);
             border-radius: 8px;
             font-weight: 600;
             white-space: nowrap;
-            font-size: 0.9rem;
+            font-size: 0.85rem; /* 폰트 미세 조정 */
             cursor: pointer;
         }
         .button-group button.active {
@@ -175,7 +177,7 @@
             <div class="button-group" id="event-select">
                 <button class="active" onclick="handleFilterClick('event', '종합', this)">종합</button>
                 <button onclick="handleFilterClick('event', '제멀', this)">제멀</button>
-                <button onclick="handleFilterClick('event', '메디신볼', this)">메디신볼</button>
+                <button onclick="handleFilterClick('event', '메디신볼', this)">메디신</button>
                 <button onclick="handleFilterClick('event', '10m', this)">10m</button>
                 <button onclick="handleFilterClick('event', '배근력', this)">배근력</button>
                 <button onclick="handleFilterClick('event', '좌전굴', this)">좌전굴</button>
@@ -216,7 +218,9 @@
             fetchData();
         };
 
+        // ⭐️ [수정] handleFilterClick (value는 원본 이름 사용) ⭐️
         function handleFilterClick(type, value, element) {
+            // value는 '메디신볼', '배근력', '좌전굴' 원본 이름이 들어옴
             if (type === 'gender' && value === currentGender) return;
             if (type === 'event' && value === currentEvent) return;
 
@@ -284,14 +288,12 @@
             
             if (currentEvent === '종합') {
                 headers = ['순위', '수험번호', '이름'];
-                // ⭐️ [수정] '전체' 성별일 때만 '성별' 컬럼 추가
                 if (currentGender === '전체') {
                     headers.push('성별');
                 }
                 headers.push('총점');
             } else {
                 headers = ['순위', '수험번호', '이름'];
-                // ⭐️ [수정] '전체' 성별일 때만 '성별' 컬럼 추가
                 if (currentGender === '전체') {
                     headers.push('성별');
                 }
@@ -317,7 +319,6 @@
             data.forEach(r => {
                 const tr = document.createElement('tr');
                 let rowHtml = '';
-                // ⭐️ [수정] '전체' 성별일 때만 '성별' 셀 추가
                 let genderCell = (currentGender === '전체') ? `<td>${r.gender}</td>` : '';
 
                 if (currentEvent === '종합') {
