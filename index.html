@@ -101,6 +101,80 @@
                 width: 100%;
             }
         }
+
+        /* --- [추가됨] 패스워드 모달 스타일 --- */
+        #password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s;
+        }
+
+        .password-modal {
+            background-color: white;
+            padding: 24px 32px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 340px;
+        }
+
+        .password-modal h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+
+        .password-modal p {
+            margin-bottom: 16px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .password-modal input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box; /* 패딩 포함 */
+            text-align: center;
+        }
+
+        .password-modal button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .password-modal button:hover {
+            background-color: #3a52c4; /* var(--primary)의 어두운 버전 */
+        }
+
+        #password-error {
+            color: red;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            height: 1em; /* 에러 메시지 공간 확보 */
+        }
+
     </style>
 </head>
 <body>
@@ -127,6 +201,55 @@
             title="콘텐츠 영역">
         </iframe>
     </main>
+
+    <div id="password-overlay">
+        <div class="password-modal">
+            <h2>액세스 코드 입력</h2>
+            <p>페이지에 접근하려면 코드를 입력하세요.</p>
+            <input type="password" id="password-input" placeholder="●●●●">
+            <button id="password-submit">입력</button>
+            <p id="password-error"></p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const correctPassword = "8691";
+            const overlay = document.getElementById('password-overlay');
+            const passInput = document.getElementById('password-input');
+            const passSubmit = document.getElementById('password-submit');
+            const passError = document.getElementById('password-error');
+
+            // Enter 키로도 제출 가능하게
+            passInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+
+            // 버튼 클릭
+            passSubmit.addEventListener('click', checkPassword);
+            
+            // 비밀번호 확인 함수
+            function checkPassword() {
+                if (passInput.value === correctPassword) {
+                    // 성공: 오버레이 숨기기 (부드럽게 사라짐)
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                    }, 300); // 0.3초 후 완전히 제거
+                } else {
+                    // 실패: 에러 메시지 표시
+                    passError.textContent = '코드가 잘못되었습니다.';
+                    passInput.value = '';
+                    passInput.focus();
+                }
+            }
+            
+            // 처음 로드 시 인풋에 포커스
+            passInput.focus();
+        })();
+    </script>
 
 </body>
 </html>
